@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Friday</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- 標題列 -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo">F</span>
+        <h1>Friday</h1>
+      </div>
+      <button id="settingsBtn" class="icon-btn" title="設定" aria-label="設定">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+    </header>
+
+    <!-- 對話區域 -->
+    <main id="messages" class="messages">
+      <div class="message assistant">
+        <div class="bubble">嗨,我是 Friday 👋 有什麼我可以幫你的嗎?</div>
+      </div>
+    </main>
+
+    <!-- 輸入區 -->
+    <footer class="composer">
+      <textarea id="input" class="input" rows="1"
+                placeholder="輸入訊息…(Enter 送出,Shift+Enter 換行)"></textarea>
+      <button id="sendBtn" class="send-btn" title="送出" aria-label="送出">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </footer>
+  </div>
+
+  <!-- 設定對話框 -->
+  <div id="settingsModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 id="settingsTitle">設定</h2>
+        <button class="icon-btn" data-close aria-label="關閉">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <label class="field-label" for="apiKey">Gemini API 金鑰</label>
+      <input id="apiKey" class="field-input" type="password"
+             placeholder="貼上你的 API 金鑰" autocomplete="off" />
+      <p class="field-hint">金鑰只會儲存在你的瀏覽器本機(localStorage),不會上傳到任何伺服器。</p>
+      <div class="modal-actions">
+        <span id="settingsStatus" class="status"></span>
+        <button id="saveKeyBtn" class="primary-btn">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+# 相依套件 / 建置產物
+node_modules/
+dist/
+build/
+
+# 環境變數與金鑰(避免任何敏感資訊上傳)
+.env
+.env.*
+*.key
+*.pem
+secrets.json
+
+# 作業系統 / 編輯器產生的檔案
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
