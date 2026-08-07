@@ -153,6 +153,91 @@ body {
   color: #ff8a80;
 }
 
+/* 助手回覆的 Markdown 排版 */
+.bubble.markdown {
+  white-space: normal;
+}
+
+.bubble.markdown p {
+  margin: 0 0 10px;
+}
+
+.bubble.markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.bubble.markdown h3,
+.bubble.markdown h4,
+.bubble.markdown h5 {
+  margin: 12px 0 6px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.bubble.markdown h3 { font-size: 17px; }
+.bubble.markdown h4 { font-size: 15.5px; }
+.bubble.markdown h5 { font-size: 14.5px; }
+
+.bubble.markdown :first-child {
+  margin-top: 0;
+}
+
+.bubble.markdown strong {
+  font-weight: 700;
+  color: #fff;
+}
+
+.bubble.markdown em {
+  font-style: italic;
+}
+
+.bubble.markdown ul,
+.bubble.markdown ol {
+  margin: 4px 0 10px;
+  padding-left: 22px;
+}
+
+.bubble.markdown li {
+  margin: 3px 0;
+}
+
+.bubble.markdown li::marker {
+  color: var(--text-dim);
+}
+
+/* 行內程式碼 */
+.bubble.markdown .inline-code {
+  font-family: "SFMono-Regular", "Consolas", "Menlo", monospace;
+  font-size: 0.88em;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+
+/* 程式碼區塊 */
+.bubble.markdown .code-block {
+  margin: 8px 0;
+  padding: 12px 14px;
+  background: #0d0d0f;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow-x: auto;
+}
+
+.bubble.markdown .code-block code {
+  font-family: "SFMono-Regular", "Consolas", "Menlo", monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #e6e6e6;
+  white-space: pre;
+}
+
+.bubble.markdown a {
+  color: #a29bfe;
+  text-decoration: underline;
+}
+
 @keyframes pop {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
