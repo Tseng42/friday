@@ -7,6 +7,16 @@ const STORAGE_KEY = "friday_gemini_api_key";
 const MODEL = "gemini-3.6-flash";
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
+// Friday 的人格設定:隨每次請求以 systemInstruction 帶給 Gemini
+const SYSTEM_INSTRUCTION = `你是 Friday,一位智慧助理,個性設定參考東尼史塔克的 AI 管家:沉穩、自信、精簡,帶一點乾式幽默感。
+
+回答原則:
+- 直接給重點,不說開場白或客套話,不重複使用者的問題。
+- 篇幅盡量精簡;只有在使用者要求細節、或主題本身需要步驟/清單時才展開。
+- 除了回答問題本身,如果你判斷使用者可能還沒問到但顯然該注意的事(風險、前提、下一步),主動簡短補一句,不要長篇大論。
+- 語氣自信、略帶幽默,但不油腔滑調,不用「親愛的使用者」「很高興為您服務」這類制式客服語言。
+- 使用繁體中文回答,除非使用者用其他語言發問。`;
+
 // 對話上下文:保存整段對話,讓 Gemini 記得前面說過的內容
 // 格式為 Gemini API 要求的 { role: "user" | "model", parts: [{ text }] }
 const history = [];
@@ -21,6 +31,19 @@ const settingsModal = document.getElementById("settingsModal");
 const apiKeyEl = document.getElementById("apiKey");
 const saveKeyBtn = document.getElementById("saveKeyBtn");
 const settingsStatus = document.getElementById("settingsStatus");
+
+const micBtn = document.getElementById("micBtn");
+const voiceToggleBtn = document.getElementById("voiceToggleBtn");
+
+const appEl = document.getElementById("app");
+const hudStatusEl = document.getElementById("hudStatus");
+
+// HUD 狀態:idle(待命)/ listening(聆聽中)/ speaking(朗讀中),純視覺呈現語音互動階段
+const HUD_LABELS = { idle: "待命中", listening: "聆聽中…", speaking: "回覆中…" };
+function setHudState(state) {
+  appEl.dataset.state = state;
+  hudStatusEl.textContent = HUD_LABELS[state] || HUD_LABELS.idle;
+}
 
 // ===== 設定 / API 金鑰 =====
 function loadApiKey() {
@@ -64,6 +87,10 @@ document.addEventListener("keydown", (e) => {
 });
 
 // ===== 訊息顯示 =====
+function formatTime(d) {
+  return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+}
+
 function addMessage(text, role) {
   const wrap = document.createElement("div");
   wrap.className = `message ${role}`;
@@ -72,7 +99,12 @@ function addMessage(text, role) {
   bubble.className = "bubble";
   bubble.textContent = text;
 
+  const time = document.createElement("span");
+  time.className = "msg-time";
+  time.textContent = formatTime(new Date());
+
   wrap.appendChild(bubble);
+  wrap.appendChild(time);
   messagesEl.appendChild(wrap);
   scrollToBottom();
   return bubble;
@@ -233,6 +265,123 @@ function renderMarkdown(src) {
   return html;
 }
 
+// ===== 語音互動 =====
+// 皆為瀏覽器原生 Web API,無金鑰、無後端、永久免費;不支援的瀏覽器直接停用對應按鈕。
+const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+const synth = window.speechSynthesis;
+
+const VOICE_REPLY_KEY = "friday_voice_reply";
+let isListening = false;
+let recognition = null;
+let voiceReplyEnabled = localStorage.getItem(VOICE_REPLY_KEY) !== "0"; // 預設開啟
+
+function updateVoiceToggleUI() {
+  voiceToggleBtn.classList.toggle("active", voiceReplyEnabled);
+  voiceToggleBtn.title = voiceReplyEnabled ? "語音回覆:開啟(點擊關閉)" : "語音回覆:關閉(點擊開啟)";
+}
+
+if (!synth) {
+  voiceToggleBtn.disabled = true;
+  voiceToggleBtn.title = "這個瀏覽器不支援語音朗讀";
+} else {
+  voiceToggleBtn.addEventListener("click", () => {
+    voiceReplyEnabled = !voiceReplyEnabled;
+    localStorage.setItem(VOICE_REPLY_KEY, voiceReplyEnabled ? "1" : "0");
+    updateVoiceToggleUI();
+    if (!voiceReplyEnabled) {
+      synth.cancel();
+      setHudState("idle");
+    }
+  });
+  updateVoiceToggleUI();
+}
+
+// 把 Markdown 原始文字轉成適合朗讀的純文字(去除語法符號,保留內容)
+function stripForSpeech(src) {
+  let text = src.replace(/```[\s\S]*?```/g, ""); // 程式碼區塊不適合念出來,直接跳過
+  text = convertLatex(text); // 數學符號 → Unicode,與畫面顯示一致
+  text = text.replace(/`([^`\n]+)`/g, "$1");
+  text = text.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/__([^_]+)__/g, "$1");
+  text = text.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1$2").replace(/(^|[^_])_([^_\n]+)_(?!_)/g, "$1$2");
+  text = text.replace(/^#{1,3}\s+/gm, "");
+  text = text.replace(/^\s*[-*+]\s+/gm, "").replace(/^\s*\d+\.\s+/gm, "");
+  text = text.replace(/^\s*>\s?/gm, "");
+  text = text.replace(/^\s*([-*_])\1{2,}\s*$/gm, "");
+  text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+  return text.trim();
+}
+
+function pickChineseVoice() {
+  return synth.getVoices().find((v) => v.lang && v.lang.toLowerCase().startsWith("zh")) || null;
+}
+
+function speak(rawText) {
+  if (!synth || !voiceReplyEnabled) return;
+  const text = stripForSpeech(rawText);
+  if (!text) return;
+  synth.cancel(); // 避免多段回覆疊在一起念
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = "zh-TW";
+  const voice = pickChineseVoice();
+  if (voice) utter.voice = voice;
+  utter.onstart = () => setHudState("speaking");
+  utter.onend = () => setHudState("idle");
+  utter.onerror = () => setHudState("idle");
+  synth.speak(utter);
+}
+
+function setListening(listening) {
+  isListening = listening;
+  micBtn.classList.toggle("listening", listening);
+  setHudState(listening ? "listening" : "idle");
+}
+
+if (!SpeechRecognitionAPI) {
+  micBtn.disabled = true;
+  micBtn.title = "這個瀏覽器不支援語音輸入";
+} else {
+  micBtn.addEventListener("click", () => {
+    if (isListening) {
+      recognition.stop();
+      return;
+    }
+    if (synth) synth.cancel(); // 開始說話前,先打斷正在朗讀的回覆
+
+    recognition = new SpeechRecognitionAPI();
+    recognition.lang = "zh-TW";
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => setListening(true);
+
+    recognition.onresult = (e) => {
+      let transcript = "";
+      for (let i = 0; i < e.results.length; i++) {
+        transcript += e.results[i][0].transcript;
+      }
+      inputEl.value = transcript;
+      autoResize();
+      if (e.results[e.results.length - 1].isFinal) {
+        sendMessage();
+      }
+    };
+
+    recognition.onerror = (e) => {
+      setListening(false);
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+        addMessage("沒有取得麥克風權限,請在瀏覽器設定允許存取麥克風後再試一次。", "assistant");
+      } else if (e.error !== "no-speech" && e.error !== "aborted") {
+        addMessage("語音輸入發生錯誤(" + e.error + "),請再試一次。", "assistant");
+      }
+    };
+
+    recognition.onend = () => setListening(false);
+
+    recognition.start();
+  });
+}
+
 // ===== 送出訊息 =====
 async function sendMessage() {
   const text = inputEl.value.trim();
@@ -269,6 +418,7 @@ async function sendMessage() {
     typing.classList.add("markdown");
     typing.innerHTML = renderMarkdown(reply);
     history.push({ role: "model", parts: [{ text: reply }] });
+    speak(reply);
   } catch (err) {
     stopDots();
     typing.classList.remove("typing");
@@ -293,7 +443,10 @@ async function callGemini(apiKey) {
     res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: history }),
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+        contents: history,
+      }),
     });
   } catch (networkErr) {
     // fetch 本身失敗(斷網、CORS 被擋、DNS 等)
