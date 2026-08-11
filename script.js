@@ -497,6 +497,219 @@ async function callGemini(apiKey) {
   return reply;
 }
 
+// ===== 提醒事項 =====
+// localStorage 儲存的待辦/提醒清單。到期通知靠瀏覽器 Notification API,
+// 只在 Friday 開著(前景或背景分頁)時才會準時觸發;完全沒開視窗時不會收到,
+// 這是純前端、無後端架構下的限制(真正的背景推播需要伺服器)。
+const REMINDERS_KEY = "friday_reminders";
+const LAST_BRIEFING_KEY = "friday_last_briefing_date";
+
+const remindersBtn = document.getElementById("remindersBtn");
+const remindersModal = document.getElementById("remindersModal");
+const reminderBadge = document.getElementById("reminderBadge");
+const reminderForm = document.getElementById("reminderForm");
+const reminderTextEl = document.getElementById("reminderText");
+const reminderDateEl = document.getElementById("reminderDate");
+const reminderTimeEl = document.getElementById("reminderTime");
+const reminderListEl = document.getElementById("reminderList");
+const reminderEmptyEl = document.getElementById("reminderEmpty");
+const notifyPermBtn = document.getElementById("notifyPermBtn");
+const notifyStatusEl = document.getElementById("notifyStatus");
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function loadReminders() {
+  try {
+    return JSON.parse(localStorage.getItem(REMINDERS_KEY)) || [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function saveReminders(list) {
+  localStorage.setItem(REMINDERS_KEY, JSON.stringify(list));
+}
+
+function makeId() {
+  return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function updateReminderBadge() {
+  const today = todayStr();
+  const dueCount = loadReminders().filter((r) => !r.done && r.dueDate <= today).length;
+  reminderBadge.textContent = String(dueCount);
+  reminderBadge.classList.toggle("hidden", dueCount === 0);
+}
+
+function toggleReminderDone(id) {
+  const list = loadReminders();
+  const target = list.find((r) => r.id === id);
+  if (target) target.done = !target.done;
+  saveReminders(list);
+  renderReminders();
+}
+
+function deleteReminder(id) {
+  saveReminders(loadReminders().filter((r) => r.id !== id));
+  renderReminders();
+}
+
+function renderReminders() {
+  const today = todayStr();
+  const list = loadReminders().sort((a, b) =>
+    (a.dueDate + (a.dueTime || "")).localeCompare(b.dueDate + (b.dueTime || ""))
+  );
+
+  reminderListEl.innerHTML = "";
+  reminderEmptyEl.classList.toggle("hidden", list.length > 0);
+
+  for (const r of list) {
+    const li = document.createElement("li");
+    li.className =
+      "reminder-item" + (r.done ? " done" : "") + (!r.done && r.dueDate === today ? " due-today" : "");
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "reminder-checkbox";
+    checkbox.checked = r.done;
+    checkbox.setAttribute("aria-label", `標記「${r.text}」為完成`);
+    checkbox.addEventListener("change", () => toggleReminderDone(r.id));
+
+    const body = document.createElement("div");
+    body.className = "reminder-body";
+    const text = document.createElement("div");
+    text.className = "reminder-text";
+    text.textContent = r.text;
+    const meta = document.createElement("div");
+    meta.className = "reminder-meta";
+    meta.textContent = r.dueTime ? `${r.dueDate} ${r.dueTime}` : r.dueDate;
+    body.appendChild(text);
+    body.appendChild(meta);
+
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "icon-btn reminder-delete";
+    delBtn.setAttribute("aria-label", `刪除「${r.text}」`);
+    delBtn.innerHTML =
+      '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+    delBtn.addEventListener("click", () => deleteReminder(r.id));
+
+    li.appendChild(checkbox);
+    li.appendChild(body);
+    li.appendChild(delBtn);
+    reminderListEl.appendChild(li);
+  }
+
+  updateReminderBadge();
+}
+
+function addReminder(text, dueDate, dueTime) {
+  const list = loadReminders();
+  list.push({ id: makeId(), text, dueDate, dueTime: dueTime || "", done: false, notified: false });
+  saveReminders(list);
+  renderReminders();
+}
+
+function openReminders() {
+  reminderDateEl.value = reminderDateEl.value || todayStr();
+  renderReminders();
+  remindersModal.classList.remove("hidden");
+}
+
+function closeReminders() {
+  remindersModal.classList.add("hidden");
+}
+
+reminderForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const text = reminderTextEl.value.trim();
+  const date = reminderDateEl.value;
+  if (!text || !date) return;
+  addReminder(text, date, reminderTimeEl.value);
+  reminderForm.reset();
+  reminderDateEl.value = todayStr();
+  reminderTextEl.focus();
+});
+
+remindersBtn.addEventListener("click", openReminders);
+remindersModal.querySelectorAll("[data-close]").forEach((el) => el.addEventListener("click", closeReminders));
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !remindersModal.classList.contains("hidden")) {
+    closeReminders();
+  }
+});
+
+// 通知權限
+function updateNotifyStatus() {
+  if (!("Notification" in window)) {
+    notifyPermBtn.disabled = true;
+    notifyPermBtn.textContent = "瀏覽器不支援通知";
+    return;
+  }
+  if (Notification.permission === "granted") {
+    notifyPermBtn.disabled = true;
+    notifyPermBtn.textContent = "通知已啟用";
+  } else if (Notification.permission === "denied") {
+    notifyPermBtn.disabled = true;
+    notifyPermBtn.textContent = "通知已被封鎖";
+    notifyStatusEl.textContent = "請到瀏覽器設定手動開啟此網站的通知權限";
+    notifyStatusEl.classList.add("show");
+  } else {
+    notifyPermBtn.disabled = false;
+    notifyPermBtn.textContent = "啟用瀏覽器通知";
+  }
+}
+
+notifyPermBtn.addEventListener("click", async () => {
+  if (!("Notification" in window)) return;
+  await Notification.requestPermission();
+  updateNotifyStatus();
+});
+
+// 每分鐘檢查一次有沒有到時間的提醒,觸發瀏覽器通知(僅限本分頁開著時有效)
+function checkDueReminders() {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  const now = new Date();
+  const list = loadReminders();
+  let changed = false;
+  for (const r of list) {
+    if (r.done || r.notified || !r.dueTime) continue;
+    const due = new Date(`${r.dueDate}T${r.dueTime}`);
+    if (now >= due) {
+      new Notification("Friday 提醒", { body: r.text, icon: "icons/icon-192.png" });
+      r.notified = true;
+      changed = true;
+    }
+  }
+  if (changed) saveReminders(list);
+}
+setInterval(checkDueReminders, 60000);
+
+// 開機/開啟時的每日簡報:列出今天到期、尚未完成的提醒,當作 Friday 主動說的第一句話
+function showDailyBriefing() {
+  const today = todayStr();
+  const dueToday = loadReminders().filter((r) => !r.done && r.dueDate === today);
+  if (dueToday.length === 0) return;
+
+  const items = dueToday.map((r) => (r.dueTime ? `${r.dueTime} ${r.text}` : r.text)).join("、");
+  const greeting = `早安,今天有 ${dueToday.length} 件事在等你:${items}。`;
+  addMessage(greeting, "assistant");
+
+  if (localStorage.getItem(LAST_BRIEFING_KEY) !== today) {
+    localStorage.setItem(LAST_BRIEFING_KEY, today);
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification("Friday", { body: greeting, icon: "icons/icon-192.png" });
+    }
+  }
+}
+
+updateReminderBadge();
+updateNotifyStatus();
+showDailyBriefing();
+
 // ===== PWA =====
 // 註冊 service worker,讓 app shell 可被快取(離線可開、加到主畫面後更像原生 App)。
 // Gemini API 呼叫是跨網域 + POST,sw.js 的 fetch handler 不會攔截,永遠直接走網路。

@@ -230,6 +230,7 @@ body {
 .app[data-state="speaking"] .hud-wave i { background: #4cd964; animation-duration: 0.8s; }
 
 .icon-btn {
+  position: relative;
   display: grid;
   place-items: center;
   width: 38px;
@@ -240,6 +241,27 @@ body {
   color: var(--text-dim);
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
+}
+
+.badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+  box-shadow: 0 0 6px rgba(61, 220, 255, 0.6);
+}
+
+.hidden {
+  display: none;
 }
 
 .icon-btn:hover {
@@ -800,6 +822,99 @@ body {
 .primary-btn:hover {
   background: var(--accent-hover);
   box-shadow: 0 2px 20px rgba(61, 220, 255, 0.45);
+}
+
+/* 提醒事項 */
+.reminder-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reminder-form-row {
+  display: flex;
+  gap: 8px;
+}
+
+.reminder-form-row .field-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.reminder-form-row .primary-btn {
+  flex-shrink: 0;
+  padding: 10px 16px;
+}
+
+.reminder-list {
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reminder-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.reminder-list::-webkit-scrollbar-thumb {
+  background: rgba(125, 211, 252, 0.22);
+  border-radius: 3px;
+}
+
+.reminder-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.reminder-item.due-today {
+  border-color: rgba(61, 220, 255, 0.5);
+  box-shadow: 0 0 12px rgba(61, 220, 255, 0.12);
+}
+
+.reminder-checkbox {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.reminder-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.reminder-text {
+  font-size: 14px;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.reminder-item.done .reminder-text {
+  color: var(--text-dim);
+  text-decoration: line-through;
+}
+
+.reminder-meta {
+  font-family: "SFMono-Regular", Consolas, Menlo, monospace;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.reminder-delete {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
 }
 
 /* 響應式 */

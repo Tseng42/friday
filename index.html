@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Friday" />
-  <link rel="stylesheet" href="style.css?v=9" />
+  <link rel="stylesheet" href="style.css?v=10" />
 </head>
 <body>
   <div class="app" id="app" data-state="idle">
@@ -36,6 +36,14 @@
         </div>
       </div>
       <div class="topbar-actions">
+        <button id="remindersBtn" class="icon-btn" title="提醒事項" aria-label="提醒事項">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span id="reminderBadge" class="badge hidden">0</span>
+        </button>
         <button id="voiceToggleBtn" class="icon-btn" title="語音回覆" aria-label="語音回覆開關">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -111,6 +119,41 @@
     </div>
   </div>
 
-  <script src="script.js?v=7"></script>
+  <!-- 提醒事項對話框 -->
+  <div id="remindersModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="remindersTitle">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 id="remindersTitle">提醒事項</h2>
+        <button class="icon-btn" data-close aria-label="關閉">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <form id="reminderForm" class="reminder-form">
+        <input id="reminderText" class="field-input" type="text" placeholder="要提醒的事…" autocomplete="off" required />
+        <div class="reminder-form-row">
+          <input id="reminderDate" class="field-input" type="date" required />
+          <input id="reminderTime" class="field-input" type="time" />
+          <button type="submit" class="primary-btn">新增</button>
+        </div>
+      </form>
+
+      <ul id="reminderList" class="reminder-list"></ul>
+      <p id="reminderEmpty" class="field-hint">還沒有任何提醒。</p>
+
+      <div class="modal-actions">
+        <span id="notifyStatus" class="status"></span>
+        <button id="notifyPermBtn" class="primary-btn">啟用瀏覽器通知</button>
+      </div>
+      <p class="field-hint">提醒只在 Friday 開著(或在背景分頁)時才會準時跳通知;完全沒開的話不會收到,這是純前端架構的限制。</p>
+    </div>
+  </div>
+
+  <script src="script.js?v=8"></script>
 </body>
 </html>
