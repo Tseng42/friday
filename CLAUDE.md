@@ -22,7 +22,11 @@ script.js     # 全部邏輯集中於此(單檔):
               #   - 對話送出與 Gemini 呼叫(sendMessage/callGemini)
               #   - 依 HTTP 狀態碼轉中文錯誤訊息(mapErrorMessage)
               #   - 輕量 Markdown → HTML 轉換,含 LaTeX 指令轉 Unicode(renderMarkdown/convertLatex)
+              #   - PWA:service worker 註冊
 style.css     # 深色主題;CSS 變數集中於 :root(--bg/--accent 等)
+manifest.json # PWA manifest(圖示、名稱、standalone 顯示模式)
+sw.js         # Service worker:快取 app shell,離線可開;不攔截跨網域/非 GET 請求(Gemini API 呼叫永遠直接走網路)
+icons/        # PWA 圖示(icon-192/512、maskable、apple-touch-icon、favicon),由 hud-core 造型產生,腳本見開發紀錄
 ```
 
 ## 關鍵慣例
@@ -42,7 +46,11 @@ style.css     # 深色主題;CSS 變數集中於 :root(--bg/--accent 等)
 
 之後跟使用者確認過電影裡實際的視覺語言是藍色線框全息(不是紅金——那是戰甲烤漆色,跟 JARVIS/Friday 的數位介面是兩回事),於是把方向 A 往「線框全息」再深化一輪:HUD 核心圖示加了第二圈反向旋轉的外環(`.hud-core-outer`,更像瞄準環);標題列/輸入區的玻璃背景加了細緻藍圖網格(內部 16px grid,疊在原本的 rgba 底色上);助手氣泡新增出現時的材質化光暈動畫(`hologram-flash`,只用在助手氣泡,因為使用者氣泡已有常駐 box-shadow,疊加動畫會互相覆蓋);`--assistant-bubble` 透明度從 0.5 降到 0.4,讓玻璃更透一點呼應「投影」而非「實體卡片」的感覺。所有新動畫都有 `prefers-reduced-motion: reduce` 的降級處理。
 
-**硬性限制:所有新增功能使用的服務都必須永久免費**,不能有計費或用量方案的風險。Web Speech API 是瀏覽器原生功能,符合此限制。Gemini API 免費額度是既有架構(使用者自帶金鑰),非本路線圖新增的成本。
+之後使用者提出更大的野心:把 Friday 做成「一個 app 解決食衣住行育樂」的生活總管,並詢問能否上線成 app。回應是分兩層:(1) 用 PWA(manifest.json + sw.js + icons/)讓它可安裝、可離線開啟,不需要上架 App Store/Google Play(那需要開發者費用),這步已完成;(2) 「食衣住行育樂」全都整合的野心規模太大,外送/叫車/購物/住房這些領域沒有真正免費的公開 API,硬接會違反永久免費限制,建議先把 Friday 定位成「生活總管大腦」——提醒/待辦、筆記、行事曆這類**純資訊層**先做深,不做淺層的假整合。使用者同意先做「免費 Friday 做得到的」,下一步是提醒/待辦事項模組。
+
+**PWA 化細節**:`manifest.json` 用 `display: standalone`、圖示取材自 `.hud-core` 的雙環+圓點造型(用 Python Pillow 產生,腳本未存入版控,純圖片產出過程)。`sw.js` 採 stale-while-revalidate:同源 GET 請求先回快取(離線可用、開啟快),背景重新抓取更新快取;非 GET 或跨網域請求(Gemini API 呼叫)一律不攔截,直接走網路,避免快取邏輯干擾 API。快取版本用 `CACHE_NAME` 常數控制,若要強制清舊快取就改這個字串。`index.html` 的 `viewport` 加了 `viewport-fit=cover`,`.topbar`/`.composer` 用 `env(safe-area-inset-*)` 讓內容不被 iOS 瀏海/底部手勢列擋住。
+
+**硬性限制:所有新增功能使用的服務都必須永久免費**,不能有計費或用量方案的風險。Web Speech API 是瀏覽器原生功能,符合此限制。Gemini API 免費額度是既有架構(使用者自帶金鑰),非本路線圖新增的成本。PWA(manifest + service worker)是瀏覽器原生機制,同樣永久免費,不需要 App Store/Google Play 帳號。
 
 ## 本機開發
 

@@ -1,5 +1,5 @@
 // ===== Friday — 前端聊天助手 =====
-// 目前為假資料模擬版,尚未串接 Gemini API。
+// 純前端直連 Google Gemini API,無後端、無建置工具。
 
 const STORAGE_KEY = "friday_gemini_api_key";
 
@@ -495,6 +495,17 @@ async function callGemini(apiKey) {
     throw new Error("Gemini 回傳了空白內容,請再試一次。");
   }
   return reply;
+}
+
+// ===== PWA =====
+// 註冊 service worker,讓 app shell 可被快取(離線可開、加到主畫面後更像原生 App)。
+// Gemini API 呼叫是跨網域 + POST,sw.js 的 fetch handler 不會攔截,永遠直接走網路。
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch((err) => {
+      console.warn("[Friday] Service worker 註冊失敗:", err);
+    });
+  });
 }
 
 // 依 HTTP 狀態碼給出清楚的中文錯誤訊息
